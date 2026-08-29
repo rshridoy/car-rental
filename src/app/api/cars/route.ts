@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { CAR_DEALS, type CarCategoryId } from "@/data/deals";
-import { simulateLatency } from "@/lib/api";
+import { jsonWithCache, simulateLatency } from "@/lib/api";
 
 export async function GET(request: NextRequest) {
   await simulateLatency();
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const start = (safePage - 1) * pageSize;
   const pageItems = items.slice(start, start + pageSize);
 
-  return NextResponse.json({
+  return jsonWithCache({
     items: pageItems,
     total,
     page: safePage,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCarById } from "@/data/deals";
-import { simulateLatency } from "@/lib/api";
+import { jsonWithCache, simulateLatency } from "@/lib/api";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   await simulateLatency();
@@ -12,5 +12,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Car not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ car });
+  return jsonWithCache({ car }, 120);
 }

@@ -41,9 +41,26 @@ UI-only state.
 | `GET /api/dashboard/sales-by-country` | `period` (`this-week`\|`this-month`\|`this-year`) |
 
 All of them filter/sort/paginate the arrays in `src/data/`, add a ~350ms simulated delay
-(`simulateLatency`), and return JSON. `src/hooks/use-api.ts` is the client-side fetch hook
-every dashboard/cars component uses — it tracks loading/error state and aborts a stale
-request if the params change before it resolves.
+(`simulateLatency`), and return JSON via `jsonWithCache` (sets
+`Cache-Control: private, max-age=30, stale-while-revalidate=60`, `src/lib/api.ts`).
+
+## Caching
+
+Two layers, both in `src/lib/api.ts` / `src/hooks/use-api.ts` — no external cache library:
+
+1. **HTTP layer** — every API response sets a short `Cache-Control` header (30s, since the
+   underlying data is static mock data that only changes when the code does). Lets the
+   browser's own HTTP cache skip a repeat network round-trip for an identical request.
+2. **Client layer** — `useApi` keeps a module-level, in-memory, stale-while-revalidate cache
+   keyed by request URL. Revisiting a filter/tab/page you've already fetched (e.g. switching
+   dashboard tabs, paging back on `/cars`) renders the cached result **immediately, with no
+   loading skeleton**, while a fresh request still runs in the background and silently updates
+   the view if the data changed. Verified with an end-to-end check that artificially stalls the
+   network for 3s on revisit — cached content still rendered in ~250ms.
+
+The cache resets on a full page reload (it's in-memory, not persisted) and isn't invalidated by
+the mock mutations elsewhere in the app (wishlist, the "Add New" dialog) since those don't
+write through this API layer.
 
 ## Structure
 
