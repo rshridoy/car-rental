@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -12,17 +13,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LOCATIONS } from "@/data/deals";
 import { cn } from "@/lib/utils";
 
-const LOCATIONS = ["London", "Manchester", "Birmingham", "Leeds", "Glasgow"];
 const DATE_PRESETS = ["Today", "Tomorrow", "This Weekend", "Next Week"];
 const TIME_PRESETS = ["09:00 AM", "12:00 PM", "03:00 PM", "06:00 PM"];
 
-function TripField({ label, placeholder, options }: { label: string; placeholder: string; options: string[] }) {
+function TripField({
+  label,
+  placeholder,
+  options,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  placeholder: string;
+  options: readonly string[];
+  value?: string;
+  onValueChange?: (value: string) => void;
+}) {
   return (
     <div className="flex-1">
       <p className="text-sm font-medium text-foreground">{label}</p>
-      <Select>
+      <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger className="mt-1 h-auto w-full justify-between border-none p-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0 data-placeholder:text-muted-foreground [&>svg]:text-muted-foreground">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -38,10 +51,22 @@ function TripField({ label, placeholder, options }: { label: string; placeholder
   );
 }
 
-function TripFields() {
+function TripFields({
+  locationValue,
+  onLocationChange,
+}: {
+  locationValue?: string;
+  onLocationChange?: (value: string) => void;
+}) {
   return (
     <div className="flex flex-1 flex-col gap-4 sm:flex-row">
-      <TripField label="Locations" placeholder="Select your city" options={LOCATIONS} />
+      <TripField
+        label="Locations"
+        placeholder="Select your city"
+        options={LOCATIONS}
+        value={locationValue}
+        onValueChange={onLocationChange}
+      />
       <TripField label="Date" placeholder="Select your date" options={DATE_PRESETS} />
       <TripField label="Time" placeholder="Select your time" options={TIME_PRESETS} />
     </div>
@@ -50,7 +75,14 @@ function TripFields() {
 
 export function BookingSearchBar() {
   const [mode, setMode] = useState<"pickup" | "dropoff">("pickup");
+  const [location, setLocation] = useState<string>("");
   const groupId = useId();
+  const router = useRouter();
+
+  const handleSearch = () => {
+    const query = location ? `?location=${encodeURIComponent(location)}` : "";
+    router.push(`/cars${query}`);
+  };
 
   return (
     <div className="rounded-[10px] border border-border bg-card p-6 shadow-lg shadow-foreground/5 sm:p-8">
@@ -66,7 +98,7 @@ export function BookingSearchBar() {
               Pick - Up
             </span>
           </label>
-          <TripFields />
+          <TripFields locationValue={location} onLocationChange={setLocation} />
         </div>
 
         <div aria-hidden="true" className="h-full w-px self-stretch bg-border" />
@@ -81,7 +113,7 @@ export function BookingSearchBar() {
           <TripFields />
         </div>
 
-        <Button size="lg" className="shrink-0 self-center rounded-xl px-8">
+        <Button size="lg" className="shrink-0 self-center rounded-xl px-8" onClick={handleSearch}>
           <Search className="h-4 w-4" />
           Search
         </Button>
@@ -93,12 +125,12 @@ export function BookingSearchBar() {
           <TabsTrigger value="dropoff">Drop - Off</TabsTrigger>
         </TabsList>
         <TabsContent value="pickup" className="mt-4">
-          <TripFields />
+          <TripFields locationValue={location} onLocationChange={setLocation} />
         </TabsContent>
         <TabsContent value="dropoff" className="mt-4">
           <TripFields />
         </TabsContent>
-        <Button size="lg" className="mt-6 w-full rounded-xl">
+        <Button size="lg" className="mt-6 w-full rounded-xl" onClick={handleSearch}>
           <Search className="h-4 w-4" />
           Search
         </Button>

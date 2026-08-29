@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TESTIMONIALS } from "@/data/landing";
+import { Reveal } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 
 const VISIBLE = 3;
@@ -22,14 +23,16 @@ export function Testimonials() {
   return (
     <section id="testimonials" className="bg-background py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-6 text-center lg:px-10">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Trusted by Thousands of
-          <br />
-          Happy Customer
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          A high-performing web-based car rental system for any rent-a-car company and website
-        </p>
+        <Reveal>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            Trusted by Thousands of
+            <br />
+            Happy Customer
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+            A high-performing web-based car rental system for any rent-a-car company and website
+          </p>
+        </Reveal>
 
         <div
           role="region"

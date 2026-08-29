@@ -1,4 +1,5 @@
 import { FOOTER_COLUMNS } from "@/data/landing";
+import { NewsletterForm } from "@/components/layout/NewsletterForm";
 
 const SOCIALS = [
   {
@@ -15,13 +16,13 @@ export function Footer() {
   return (
     <footer className="bg-surface-muted">
       <div className="mx-auto max-w-7xl px-6 pt-20 pb-10 lg:px-10">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="flex flex-col gap-6 border-b border-line-strong pb-10 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-2xl font-bold tracking-tight text-foreground">Logo</p>
-            <p className="mt-4 max-w-xs text-sm text-muted-foreground">
+            <p className="mt-2 max-w-xs text-sm text-muted-foreground">
               Our vision is to provide convenience and help increase your sales business.
             </p>
-            <div className="mt-6 flex items-center gap-3">
+            <div className="mt-4 flex items-center gap-3">
               {SOCIALS.map((social) => (
                 <a
                   key={social.label}
@@ -54,7 +55,10 @@ export function Footer() {
               </a>
             </div>
           </div>
+          <NewsletterForm />
+        </div>
 
+        <div className="grid grid-cols-1 gap-12 pt-10 sm:grid-cols-3">
           {FOOTER_COLUMNS.map((column) => (
             <div key={column.title}>
               <p className="font-semibold text-foreground">{column.title}</p>

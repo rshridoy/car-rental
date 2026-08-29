@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState, type FormEvent } from "react";
 import {
   Bell,
   Car,
@@ -15,15 +15,36 @@ import {
   Settings,
   Store,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -32,7 +53,80 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { CAR_CATEGORIES } from "@/data/deals";
 import { cn } from "@/lib/utils";
+
+const NOTIFICATIONS = [
+  { title: "New order received", detail: "Range Rover — 15 mins ago" },
+  { title: "Payment failed", detail: "Red Toyota — 1 hour ago" },
+  { title: "Stock running low", detail: "Compact car — today" },
+];
+
+const MESSAGES = [{ title: "New message from support", detail: "Regarding invoice #147784454554" }];
+
+function AddProductDialog() {
+  const formId = useId();
+  const [open, setOpen] = useState(false);
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const name = String(form.get("name") ?? "").trim();
+    setOpen(false);
+    e.currentTarget.reset();
+    toast.success(name ? `"${name}" added to inventory` : "Product added to inventory");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="hidden rounded-full md:inline-flex">
+          <Plus className="h-4 w-4" />
+          Add New
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add new product</DialogTitle>
+          <DialogDescription>This is a mock form — nothing is persisted to a backend.</DialogDescription>
+        </DialogHeader>
+        <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`${formId}-name`}>Product name</Label>
+            <Input id={`${formId}-name`} name="name" placeholder="e.g. Toyota Yaris" required />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`${formId}-category`}>Category</Label>
+            <Select name="category" defaultValue={CAR_CATEGORIES[0].id}>
+              <SelectTrigger id={`${formId}-category`} className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CAR_CATEGORIES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={`${formId}-price`}>Price per day ($)</Label>
+            <Input id={`${formId}-price`} name="price" type="number" min={0} step="0.01" placeholder="72.00" required />
+          </div>
+        </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button type="submit" form={formId}>
+            Save product
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function DashboardLogo({ iconOnly = false, className }: { iconOnly?: boolean; className?: string }) {
   return (
@@ -116,12 +210,12 @@ export function Topbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button className="hidden rounded-full md:inline-flex">
-          <Plus className="h-4 w-4" />
-          Add New
-        </Button>
+        <AddProductDialog />
 
-        <Button className="hidden rounded-full bg-navy text-navy-foreground hover:bg-navy/90 md:inline-flex">
+        <Button
+          className="hidden rounded-full bg-navy text-navy-foreground hover:bg-navy/90 md:inline-flex"
+          onClick={() => toast.info("POS terminal is a mock action in this build")}
+        >
           <Store className="h-4 w-4" />
           POS
         </Button>
@@ -130,20 +224,54 @@ export function Topbar({
           🇬🇧
         </span>
 
-        <Button variant="ghost" size="icon" className="hidden rounded-full lg:inline-flex" aria-label="Fullscreen">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden rounded-full lg:inline-flex"
+          aria-label="Fullscreen"
+          onClick={() => document.documentElement.requestFullscreen?.()}
+        >
           <Maximize className="h-4 w-4" />
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative rounded-full" aria-label="Messages, 1 unread">
-          <Mail className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
-            01
-          </span>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative rounded-full" aria-label={`Messages, ${MESSAGES.length} unread`}>
+              <Mail className="h-4 w-4" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
+                {String(MESSAGES.length).padStart(2, "0")}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Messages</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {MESSAGES.map((m) => (
+              <DropdownMenuItem key={m.title} className="flex-col items-start gap-0.5">
+                <span className="text-sm font-medium">{m.title}</span>
+                <span className="text-xs text-muted-foreground">{m.detail}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
-          <Bell className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
+              <Bell className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {NOTIFICATIONS.map((n) => (
+              <DropdownMenuItem key={n.title} className="flex-col items-start gap-0.5">
+                <span className="text-sm font-medium">{n.title}</span>
+                <span className="text-xs text-muted-foreground">{n.detail}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Button variant="ghost" size="icon" className="hidden rounded-full sm:inline-flex" aria-label="Settings">
           <Settings className="h-4 w-4" />

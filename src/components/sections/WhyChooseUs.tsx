@@ -1,21 +1,24 @@
 import { FEATURES } from "@/data/landing";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
+import { Reveal } from "@/components/ui/Reveal";
 
 export function WhyChooseUs() {
   return (
     <section id="why-choose-us" className="bg-background">
       <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-10">
-        <div className="text-center">
+        <Reveal className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Why choose us
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
             A high-performing web-based car rental system for any rent-a-car company and website
           </p>
-        </div>
+        </Reveal>
 
         <div className="mt-16 grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <ImagePlaceholder className="h-72 w-full sm:h-96" iconClassName="h-14 w-14" />
+          <Reveal>
+            <ImagePlaceholder className="h-72 w-full sm:h-96" iconClassName="h-14 w-14" />
+          </Reveal>
 
           <div className="flex flex-col gap-10">
             {FEATURES.map((feature) => (

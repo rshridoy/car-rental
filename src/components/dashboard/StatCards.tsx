@@ -1,9 +1,9 @@
 "use client";
 
-import { PackageCheck, PiggyBank, RefreshCw, TrendingUp } from "lucide-react";
+import { PackageCheck, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { STAT_CARDS, type StatCard } from "@/data/dashboard";
-import { useDelayedReady } from "@/hooks/use-delayed-ready";
+import type { DateRangeId, StatCard } from "@/data/dashboard";
+import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
 const TONE_STYLES: Record<StatCard["tone"], string> = {
@@ -13,24 +13,16 @@ const TONE_STYLES: Record<StatCard["tone"], string> = {
 };
 
 function StatCardView({ stat }: { stat: StatCard }) {
+  const isDecrease = stat.deltaLabel?.includes("decrease");
+
   return (
     <div className={cn("relative flex flex-1 flex-col justify-between overflow-hidden rounded-2xl p-5", TONE_STYLES[stat.tone])}>
-      {stat.tone !== "surface" && (
-        <button
-          type="button"
-          aria-label="Refresh"
-          className="absolute top-4 right-4 text-current/80 hover:text-current"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      )}
-
       <p className={cn("text-sm font-medium", stat.tone === "surface" && "text-primary")}>{stat.label}</p>
       <p className="mt-2 text-[1.75rem] leading-none font-bold">{stat.value}</p>
 
       {stat.deltaLabel && (
-        <p className="mt-3 flex items-center gap-1 text-xs font-medium text-success">
-          <TrendingUp className="h-3.5 w-3.5" />
+        <p className={cn("mt-3 flex items-center gap-1 text-xs font-medium", isDecrease ? "text-destructive" : "text-success")}>
+          {isDecrease ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
           {stat.deltaLabel}
         </p>
       )}
@@ -48,10 +40,13 @@ function StatCardView({ stat }: { stat: StatCard }) {
   );
 }
 
-export function StatCards() {
-  const ready = useDelayedReady(500);
+export function StatCards({ range, refreshKey }: { range: DateRangeId; refreshKey: number }) {
+  const { data, loading } = useApi<{ stats: StatCard[] }>("/api/dashboard/stats", {
+    range,
+    _r: refreshKey || undefined,
+  });
 
-  if (!ready) {
+  if (loading || !data) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <Skeleton className="h-36 rounded-2xl sm:col-span-2" />
@@ -61,13 +56,15 @@ export function StatCards() {
     );
   }
 
+  const [earning, sales, goods] = data.stats;
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
       <div className="sm:col-span-2">
-        <StatCardView stat={STAT_CARDS[0]} />
+        <StatCardView stat={earning} />
       </div>
-      <StatCardView stat={STAT_CARDS[1]} />
-      <StatCardView stat={STAT_CARDS[2]} />
+      <StatCardView stat={sales} />
+      <StatCardView stat={goods} />
     </div>
   );
 }

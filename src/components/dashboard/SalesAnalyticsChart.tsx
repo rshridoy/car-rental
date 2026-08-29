@@ -1,10 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SALES_ANALYTICS } from "@/data/dashboard";
-import { useDelayedReady } from "@/hooks/use-delayed-ready";
+import type { SalesAnalyticsPoint } from "@/data/dashboard";
+import { useApi } from "@/hooks/use-api";
 
 function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) {
   if (!active || !payload?.length) return null;
@@ -17,21 +25,36 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 }
 
 export function SalesAnalyticsChart() {
-  const ready = useDelayedReady(1100);
+  const [year, setYear] = useState("2024");
+  const { data, loading } = useApi<{ points: SalesAnalyticsPoint[]; years: string[] }>(
+    "/api/dashboard/sales-analytics",
+    { year }
+  );
 
   return (
     <Card className="rounded-2xl border-border">
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Sales Analytics</CardTitle>
-        <span className="rounded-lg border border-border px-3 py-1.5 text-sm text-foreground">2023</span>
+        <Select value={year} onValueChange={setYear}>
+          <SelectTrigger size="sm" className="rounded-lg" aria-label="Select year">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(data?.years ?? [year]).map((y) => (
+              <SelectItem key={y} value={y}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
-        {!ready ? (
+        {loading || !data ? (
           <Skeleton className="h-64 w-full rounded-xl" />
         ) : (
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={SALES_ANALYTICS} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+              <AreaChart data={data.points} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.35} />
@@ -62,6 +85,7 @@ export function SalesAnalyticsChart() {
                   fill="url(#salesFill)"
                   dot={{ r: 3, fill: "var(--color-chart-1)", strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
+                  isAnimationActive={false}
                 />
               </AreaChart>
             </ResponsiveContainer>
