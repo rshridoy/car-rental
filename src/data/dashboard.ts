@@ -30,8 +30,6 @@ export type SidebarItem = {
   label: string;
   icon: LucideIcon;
   href: string;
-  expandable?: boolean;
-  active?: boolean;
 };
 
 export type SidebarGroup = {
@@ -43,8 +41,8 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     title: "Main",
     items: [
-      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", active: true },
-      { label: "Super Admin", icon: ShieldCheck, href: "/dashboard/super-admin", expandable: true },
+      { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+      { label: "Super Admin", icon: ShieldCheck, href: "/dashboard/super-admin" },
     ],
   },
   {
@@ -75,11 +73,11 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     title: "Sales",
     items: [
-      { label: "Sales", icon: ShoppingCart, href: "/dashboard/sales", expandable: true },
+      { label: "Sales", icon: ShoppingCart, href: "/dashboard/sales" },
       { label: "Invoices", icon: FileText, href: "/dashboard/invoices" },
       { label: "Sales Return", icon: RotateCcw, href: "/dashboard/sales-return" },
       { label: "Quotation", icon: FileSpreadsheet, href: "/dashboard/quotation" },
-      { label: "POS", icon: Store, href: "/dashboard/pos", expandable: true },
+      { label: "POS", icon: Store, href: "/dashboard/pos" },
     ],
   },
   {

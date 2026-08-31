@@ -25,7 +25,15 @@ UI-only state.
 | `/`            | Landing page — nav, hero, functional booking search, how-it-works, popular deals (tabbed, real API data), why-choose-us, testimonials carousel, newsletter, footer. |
 | `/cars`        | Full fleet listing — category tabs + location filter + pagination, all reflected in the URL (`?category=&location=&page=`), so it's shareable/bookmarkable. |
 | `/cars/[id]`   | Car detail page — specs, description, wishlist toggle, and a mock booking panel ("Confirm Booking" shows a toast; nothing is persisted). |
-| `/dashboard`   | Admin dashboard — date-range-filtered greeting bar & stat cards, best sellers (+ "View All" dialog), recent transactions (search/status filter/sort/pagination), sales analytics chart (year filter), sales-by-country map (period filter). Sidebar + topbar shell in `src/app/dashboard/layout.tsx`. |
+| `/dashboard`   | Overview — date-range-filtered greeting bar & stat cards, best sellers (+ "View All" dialog), recent transactions (search/status filter/sort/pagination), sales analytics chart (year filter), sales-by-country map (period filter). Sidebar + topbar shell in `src/app/dashboard/layout.tsx`. |
+| `/dashboard/products`, `/products/create`, `/products/expired`, `/products/low-stock` | Inventory — searchable/filterable/paginated product table (`ProductsTable`, backed by `/api/cars`), a real create form (POSTs to `/api/cars`), and expired/low-stock views (`stockFilter` on the same endpoint). |
+| `/dashboard/category`, `/sub-category`, `/brands`, `/units`, `/variant-attributes`, `/warranties` | Reference/config tables. Category and Brands are **live-derived** from the product catalog (see Category/Brands below); the rest are static reference data — all searchable/sortable/paginated via the generic `DataTable`. |
+| `/dashboard/print-barcode`, `/print-qr-code` | Pick a product, get a deterministic (not scannable) barcode/QR preview, and a real `window.print()` button. |
+| `/dashboard/stock`, `/stock/adjustment`, `/stock/transfer` | Stock overview (reuses `ProductsTable`) plus adjustment/transfer forms that log to an in-session history table. |
+| `/dashboard/sales`, `/invoices`, `/sales-return`, `/quotation` | Sales-side tables; Quotation also has a "Create Quotation" dialog that appends to its own table. |
+| `/dashboard/pos` | A working point-of-sale: click a product to add to cart, adjust quantity, checkout clears the cart and shows a total. |
+| `/dashboard/promo/codes`, `/promo/offers` | Promo codes (create dialog + active/paused toggle) and offer cards (toggle). |
+| `/dashboard/super-admin` | Admin-user list + "Invite Admin" dialog. |
 | `/styleguide`  | Token palette, typography scale, and every component state.                                      |
 
 ## API routes
@@ -43,6 +51,35 @@ UI-only state.
 All of them filter/sort/paginate the arrays in `src/data/`, add a ~350ms simulated delay
 (`simulateLatency`), and return JSON via `jsonWithCache` (sets
 `Cache-Control: private, max-age=30, stale-while-revalidate=60`, `src/lib/api.ts`).
+
+`POST /api/cars` also exists (used by "Create Product" and the topbar "Add New" dialog) — it
+appends a new car to the in-memory catalog and returns it with a 201.
+
+## A real gotcha worth knowing about: shared in-memory mock state
+
+`CAR_DEALS` (`src/data/deals.ts`) is mutated at runtime (`createCar`, called from `POST
+/api/cars`) so "Create Product" actually shows up elsewhere in the app. The first version of
+this used a plain `export const CAR_DEALS = [...]` module-level array — and it **silently
+didn't work**: Next.js can bundle each route (API routes, pages) as a separate module instance
+in production, so `/dashboard/category` and `/dashboard/brands` (which call
+`getCategorySummary()`/`getBrandSummary()` directly against `CAR_DEALS`) were reading a
+different, never-mutated copy of the array than the one `/api/cars`'s `POST` handler mutated —
+new products showed up in `/dashboard/products` (which goes through the API) but not in
+Category/Brands counts (which read the array directly). Confirmed by comparing
+`/api/cars?category=popular`'s `total` against the count rendered on `/dashboard/category` after
+a `POST` — they diverged (23 vs. a frozen 20) on the very build where this was introduced.
+
+Fixed by backing `CAR_DEALS` with `globalThis` instead of a plain module binding — the same
+trick commonly used for Prisma-client singletons under Next.js dev HMR, applied here because
+`globalThis` is the one thing guaranteed to be the same object across every bundle in a
+process. If you add more admin data that needs both live mutation and to be read directly
+(not through an API route) by a page, use the same pattern, or better, always read it through
+the corresponding API route via `useApi` instead.
+
+`/dashboard/category` and `/dashboard/brands` are also marked `export const dynamic =
+"force-dynamic"` since they read this array directly during server rendering — without it,
+Next would be free to statically prerender the page once at build time and freeze in
+whatever `CAR_DEALS` looked like then.
 
 ## Caching
 
@@ -72,8 +109,10 @@ write through this API layer.
 - `src/components/sections/`, `src/components/layout/` — landing page sections.
 - `src/components/cars/` — `CarCard` (+ skeleton), `CarsListing` (the `/cars` page body),
   `BookingPanel`, `WishlistButton` — shared between the landing teaser and the `/cars*` routes.
-- `src/components/dashboard/` — sidebar, topbar, and dashboard panels.
-- `src/data/` — typed mock data (`landing.ts`, `deals.ts`, `dashboard.ts`).
+- `src/components/dashboard/` — sidebar, topbar, dashboard overview panels, plus the generic
+  `DataTable` (search + sort + pagination over any array) and `PageHeader` used by nearly every
+  admin sub-page, and `ProductsTable`/`CategoryTable`/`BrandsTable` for the catalog-backed ones.
+- `src/data/` — typed mock data (`landing.ts`, `deals.ts`, `dashboard.ts`, `admin.ts`).
 - `src/app/api/` — the mock API route handlers described above.
 - `src/hooks/` — `use-api` (fetch + loading/error state), `use-wishlist` (localStorage-backed,
   via `useSyncExternalStore` so it never hydration-mismatches).
@@ -119,10 +158,23 @@ Font is Plus Jakarta Sans (`next/font/google`) via the `--font-sans` CSS variabl
 - **Sidebar responsive behavior**: collapses to an icon-only rail at the `lg` breakpoint
   unconditionally, and additionally accepts a manual collapse toggle once past `xl`. Below `lg`
   it becomes a Sheet drawer with full labels.
-- **Expandable sidebar items** (`Super Admin`, `Sales`, `POS`) toggle a chevron on click but
-  have no nested items — no submenu content was specified in the prompt.
-- **"Coming Soon" topbar selector** and **POS button** are intentionally still mock actions
-  (a toast on POS click) — no corresponding dataset exists to switch.
+- **Sidebar navigation**: every item now points at a real page (see route map above) and
+  highlights based on the actual current path (`usePathname`), not a hardcoded flag. `Super
+  Admin`, `Sales`, and `POS` were originally marked "expandable" (a `›` chevron, no real
+  destination, per the prompt's own dashboard-frame description) — now that they have real
+  pages, they're plain links like everything else and the unused expand/collapse code was
+  removed.
+- **"Coming Soon" topbar selector** is still a mock action (no corresponding dataset exists to
+  switch); **"Add New"** and **POS** are real now — "Add New" `POST`s to `/api/cars`, and
+  `/dashboard/pos` is a working cart/checkout flow (see route map).
+- The ~20 sidebar pages beyond the Dashboard overview weren't specified beyond their nav label
+  in the original prompt (only the overview screen was described in detail), so their content
+  was my call: real, filterable/sortable/paginated tables (`DataTable`, a generic reusable
+  component) over new mock datasets in `src/data/admin.ts`, reusing `/api/cars` wherever the
+  data is genuinely the product catalog (Products, Expired, Low Stock, Manage Stock) rather
+  than inventing a parallel dataset. Barcode/QR previews are deterministic-but-not-scannable
+  (no barcode/QR library added for this); POS and Stock Adjustment/Transfer keep their own
+  session-only state (not wired to a backend).
 - **Popular car rental deals / `/cars` catalog**: the wireframe only shows content for
   "Popular" (8 identical placeholder cards, one featured) — those 8 are reproduced exactly for
   the landing teaser. Everything beyond that (12 more "popular" cars, all of "large"/"small")

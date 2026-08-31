@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -20,50 +20,34 @@ import { cn } from "@/lib/utils";
  */
 function NavRow({
   item,
+  active,
   collapsed,
   responsive,
   onNavigate,
 }: {
   item: SidebarItem;
+  active: boolean;
   collapsed: boolean;
   responsive: boolean;
   onNavigate?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const Icon = item.icon;
 
   const labelClass = responsive
     ? cn("flex-1 truncate text-left hidden xl:inline", collapsed && "xl:hidden")
     : cn("flex-1 truncate text-left", collapsed && "hidden");
 
-  const chevronClass = responsive
-    ? cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform hidden xl:block", collapsed && "xl:hidden", open && "rotate-90")
-    : cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", collapsed && "hidden", open && "rotate-90");
-
-  const content = (
-    <>
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className={labelClass}>{item.label}</span>
-      {item.expandable && <ChevronRight className={chevronClass} />}
-    </>
-  );
-
   const rowClass = cn(
     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-    item.active
-      ? "bg-accent font-medium text-accent-foreground"
-      : "text-foreground/80 hover:bg-muted hover:text-foreground",
+    active ? "bg-accent font-medium text-accent-foreground" : "text-foreground/80 hover:bg-muted hover:text-foreground",
     responsive && (collapsed ? "justify-center px-0" : "xl:justify-start xl:px-3 justify-center px-0")
   );
 
-  const row = item.expandable ? (
-    <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className={rowClass}>
-      {content}
-    </button>
-  ) : (
-    <a href={item.href} onClick={onNavigate} className={rowClass}>
-      {content}
-    </a>
+  const row = (
+    <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} className={rowClass}>
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className={labelClass}>{item.label}</span>
+    </Link>
   );
 
   if (!responsive) return row;
@@ -87,6 +71,8 @@ export function Sidebar({
   onNavigate?: () => void;
   className?: string;
 }) {
+  const pathname = usePathname();
+
   const titleClass = responsive
     ? cn("px-3 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase hidden xl:block", collapsed && "xl:hidden")
     : cn("px-3 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase", collapsed && "hidden");
@@ -102,7 +88,14 @@ export function Sidebar({
           <p className={titleClass}>{group.title}</p>
           <div aria-hidden="true" className={dividerClass} />
           {group.items.map((item) => (
-            <NavRow key={item.label} item={item} collapsed={collapsed} responsive={responsive} onNavigate={onNavigate} />
+            <NavRow
+              key={item.label}
+              item={item}
+              active={pathname === item.href}
+              collapsed={collapsed}
+              responsive={responsive}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       ))}

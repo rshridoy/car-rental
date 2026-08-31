@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { CAR_CATEGORIES } from "@/data/deals";
+import { invalidateApiCache } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
 const NOTIFICATIONS = [
@@ -67,14 +68,35 @@ const MESSAGES = [{ title: "New message from support", detail: "Regarding invoic
 function AddProductDialog() {
   const formId = useId();
   const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const name = String(form.get("name") ?? "").trim();
-    setOpen(false);
-    e.currentTarget.reset();
-    toast.success(name ? `"${name}" added to inventory` : "Product added to inventory");
+    const category = String(form.get("category") ?? "popular");
+    const price = Number(form.get("price")) || 72;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/cars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, category, pricePerDay: price }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+
+      invalidateApiCache("/api/cars");
+      setOpen(false);
+      e.currentTarget.reset();
+      toast.success(`"${name}" added to inventory`, {
+        description: "It now shows up in Products and the matching category everywhere in the app.",
+      });
+    } catch {
+      toast.error("Couldn't add product — try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -88,7 +110,9 @@ function AddProductDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add new product</DialogTitle>
-          <DialogDescription>This is a mock form — nothing is persisted to a backend.</DialogDescription>
+          <DialogDescription>
+            Adds a real (in-memory) entry to the catalog — it resets when the server restarts.
+          </DialogDescription>
         </DialogHeader>
         <form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -119,8 +143,8 @@ function AddProductDialog() {
           <DialogClose asChild>
             <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button type="submit" form={formId}>
-            Save product
+          <Button type="submit" form={formId} disabled={submitting}>
+            {submitting ? "Saving…" : "Save product"}
           </Button>
         </DialogFooter>
       </DialogContent>

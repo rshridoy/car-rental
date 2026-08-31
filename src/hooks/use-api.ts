@@ -23,14 +23,28 @@ function buildQuery(params?: Params) {
  * loading skeleton for data we already have.
  */
 const cache = new Map<string, unknown>();
+const invalidationListeners = new Set<(prefix: string) => void>();
+
+/**
+ * Call after a mutation (e.g. POST /api/cars) so every mounted useApi call
+ * whose URL starts with `prefix` drops its cached response and silently
+ * re-fetches in the background — no page reload, no manual "refresh" click.
+ */
+export function invalidateApiCache(prefix: string) {
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
+  for (const listener of invalidationListeners) listener(prefix);
+}
 
 /**
  * Fetches one of this project's local mock API routes (src/app/api/**) and
  * tracks loading/error state. Stale-while-revalidate: a cache hit renders
  * immediately with no loading state, then a fresh request still runs in the
  * background and silently updates the result when it resolves. Re-fetches
- * whenever the path or params change, and aborts a stale in-flight request
- * if a newer one starts first.
+ * whenever the path or params change (or the cache is explicitly invalidated
+ * via `invalidateApiCache`), and aborts a stale in-flight request if a newer
+ * one starts first.
  */
 export function useApi<T>(path: string, params?: Params) {
   const query = buildQuery(params);
@@ -41,6 +55,7 @@ export function useApi<T>(path: string, params?: Params) {
   const [loading, setLoading] = useState(cached === undefined);
   const [error, setError] = useState<string | null>(null);
   const [trackedUrl, setTrackedUrl] = useState(url);
+  const [generation, setGeneration] = useState(0);
 
   if (url !== trackedUrl) {
     setTrackedUrl(url);
@@ -49,6 +64,16 @@ export function useApi<T>(path: string, params?: Params) {
     setLoading(nextCached === undefined);
     setError(null);
   }
+
+  useEffect(() => {
+    const listener = (prefix: string) => {
+      if (url.startsWith(prefix)) setGeneration((g) => g + 1);
+    };
+    invalidationListeners.add(listener);
+    return () => {
+      invalidationListeners.delete(listener);
+    };
+  }, [url]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +95,7 @@ export function useApi<T>(path: string, params?: Params) {
       });
 
     return () => controller.abort();
-  }, [url]);
+  }, [url, generation]);
 
   return useMemo(() => ({ data, loading, error }), [data, loading, error]);
 }
