@@ -2,6 +2,7 @@
 
 import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MarkdownLite } from "./MarkdownLite";
 import type { ChatMessage } from "@/lib/ai/types";
 
 interface ChatMessageProps {
@@ -40,7 +41,7 @@ export function ChatMessageBubble({ message }: ChatMessageProps) {
             : "rounded-tl-sm bg-muted text-foreground"
         )}
       >
-        {message.content}
+        <MarkdownLite text={message.content} />
       </div>
     </div>
   );

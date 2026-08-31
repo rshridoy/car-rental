@@ -14,6 +14,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sparkles, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TypingIndicator } from "./ChatMessage";
+import { MarkdownLite } from "./MarkdownLite";
 import { useAIChat, MAX_MESSAGE_LENGTH } from "@/hooks/use-ai-chat";
 import { cn } from "@/lib/utils";
 
@@ -144,13 +145,13 @@ export function AIRecommendBar({ onRecommend, onClear, activeIds }: AIRecommendB
                 <div
                   key={i}
                   className={cn(
-                    "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-line",
+                    "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
                     msg.role === "user"
                       ? "ml-auto rounded-tr-sm bg-primary text-primary-foreground"
                       : "rounded-tl-sm bg-muted text-foreground"
                   )}
                 >
-                  {msg.content}
+                  <MarkdownLite text={msg.content} />
                 </div>
               ))}
               {isLoading && (
