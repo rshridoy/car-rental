@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -17,6 +17,49 @@ import type { NavLink } from "@/data/landing";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
+/**
+ * Scroll-spy hook: watches each section ID in the nav and returns the
+ * href of whichever section is currently most visible in the viewport.
+ * Falls back to "#home" when nothing else intersects (i.e. at the top).
+ */
+function useActiveSection(sectionIds: string[]): string {
+  const [activeHref, setActiveHref] = useState("#home");
+
+  useEffect(() => {
+    if (sectionIds.length === 0) return;
+
+    const ratioMap = new Map<string, number>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          ratioMap.set(`#${entry.target.id}`, entry.intersectionRatio);
+        }
+        // Pick the section with the highest intersection ratio.
+        let best = "#home";
+        let bestRatio = 0;
+        for (const [href, ratio] of ratioMap) {
+          if (ratio > bestRatio) {
+            bestRatio = ratio;
+            best = href;
+          }
+        }
+        setActiveHref(best);
+      },
+      { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] }
+    );
+
+    for (const id of sectionIds) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, [sectionIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return activeHref;
+}
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -24,6 +67,10 @@ export function Header() {
 
   const { data, loading } = useApi<{ items: NavLink[] }>("/api/nav-links");
   const navLinks = data?.items ?? [];
+
+  // Extract section IDs from the nav links (strip the leading "#").
+  const sectionIds = navLinks.map((l) => l.href.replace(/^#/, ""));
+  const activeHref = useActiveSection(isHome ? sectionIds : []);
 
   return (
     <header
@@ -44,6 +91,9 @@ export function Header() {
                 <Skeleton key={i} className="h-4 w-20" />
               ))
             : navLinks.map((link, i) => {
+                const isActive = isHome
+                  ? activeHref === link.href
+                  : i === 0; // on other pages only "Home" can be active
                 // On home page: use hash anchors for smooth in-page scroll.
                 // On other pages: Home → "/", section links → "/#section-id".
                 const href = isHome ? link.href : i === 0 ? "/" : `/${link.href}`;
@@ -51,10 +101,10 @@ export function Header() {
                   <Link
                     key={link.label}
                     href={href}
-                    aria-current={i === 0 ? "page" : undefined}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "transition-colors hover:text-foreground",
-                      i === 0 && "font-medium text-foreground"
+                      isActive && "font-medium text-foreground"
                     )}
                   >
                     {link.label}
@@ -85,13 +135,17 @@ export function Header() {
             </SheetHeader>
             <nav aria-label="Mobile" className="flex flex-col gap-4 px-4 text-sm">
               {navLinks.map((link, i) => {
+                const isActive = isHome ? activeHref === link.href : i === 0;
                 const href = isHome ? link.href : i === 0 ? "/" : `/${link.href}`;
                 return (
                   <Link
                     key={link.label}
                     href={href}
                     onClick={() => setOpen(false)}
-                    className={cn("text-muted-foreground", i === 0 && "font-medium text-foreground")}
+                    className={cn(
+                      "text-muted-foreground",
+                      isActive && "font-medium text-foreground"
+                    )}
                   >
                     {link.label}
                   </Link>
