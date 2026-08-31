@@ -68,9 +68,27 @@ export function Header() {
   const { data, loading } = useApi<{ items: NavLink[] }>("/api/nav-links");
   const navLinks = data?.items ?? [];
 
-  // Extract section IDs from the nav links (strip the leading "#").
-  const sectionIds = navLinks.map((l) => l.href.replace(/^#/, ""));
+  // Only hash links ("#section") are homepage sections to scroll-spy on —
+  // a link like "/cars" is a real route and isn't observed.
+  const sectionIds = navLinks
+    .filter((l) => l.href.startsWith("#"))
+    .map((l) => l.href.slice(1));
   const activeHref = useActiveSection(isHome ? sectionIds : []);
+
+  function resolveLink(link: NavLink) {
+    const isSectionLink = link.href.startsWith("#");
+    if (!isSectionLink) {
+      // A real page route (e.g. "/cars") — use as-is, active when on that page.
+      return { href: link.href, isActive: pathname === link.href };
+    }
+    if (isHome) {
+      return { href: link.href, isActive: activeHref === link.href };
+    }
+    // On other pages: "#home" → "/", other sections → "/#section-id".
+    // None of these are the active page (that's decided above by pathname).
+    const isHomeLink = link.href === "#home";
+    return { href: isHomeLink ? "/" : `/${link.href}`, isActive: false };
+  }
 
   return (
     <header
@@ -90,13 +108,8 @@ export function Header() {
             ? Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-4 w-20" />
               ))
-            : navLinks.map((link, i) => {
-                const isActive = isHome
-                  ? activeHref === link.href
-                  : i === 0; // on other pages only "Home" can be active
-                // On home page: use hash anchors for smooth in-page scroll.
-                // On other pages: Home → "/", section links → "/#section-id".
-                const href = isHome ? link.href : i === 0 ? "/" : `/${link.href}`;
+            : navLinks.map((link) => {
+                const { href, isActive } = resolveLink(link);
                 return (
                   <Link
                     key={link.label}
@@ -134,9 +147,8 @@ export function Header() {
               <SheetTitle>Menu</SheetTitle>
             </SheetHeader>
             <nav aria-label="Mobile" className="flex flex-col gap-4 px-4 text-sm">
-              {navLinks.map((link, i) => {
-                const isActive = isHome ? activeHref === link.href : i === 0;
-                const href = isHome ? link.href : i === 0 ? "/" : `/${link.href}`;
+              {navLinks.map((link) => {
+                const { href, isActive } = resolveLink(link);
                 return (
                   <Link
                     key={link.label}

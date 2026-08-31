@@ -8,6 +8,7 @@ export type NavLink = {
 
 export const NAV_LINKS: NavLink[] = [
   { label: "Home", href: "#home" },
+  { label: "Cars", href: "/cars" },
   { label: "How it Work", href: "#how-it-works" },
   { label: "Rental Details", href: "#deals" },
   { label: "Why Choose Us", href: "#why-choose-us" },
