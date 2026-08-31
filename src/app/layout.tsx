@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { AIChatWidget } from "@/components/ai/AIChatWidget";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+        <AIChatWidget />
         <Toaster position="top-center" />
       </body>
     </html>

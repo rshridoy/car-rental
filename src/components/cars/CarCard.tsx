@@ -1,24 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImagePlaceholder } from "@/components/ui/ImagePlaceholder";
 import type { CarDeal } from "@/data/deals";
 import { useWishlist } from "@/hooks/use-wishlist";
 import { cn } from "@/lib/utils";
 
-export function CarCard({ car }: { car: CarDeal }) {
+interface CarCardProps {
+  car: CarDeal;
+  /** When true, the card shows an AI-recommended highlight ring and badge */
+  aiHighlighted?: boolean;
+}
+
+export function CarCard({ car, aiHighlighted = false }: CarCardProps) {
   const { isWishlisted, toggle } = useWishlist();
   const wished = isWishlisted(car.id);
 
   return (
     <div
       className={cn(
-        "group flex flex-col rounded-2xl border bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/5",
-        car.featured ? "border-primary ring-1 ring-primary" : "border-border"
+        "group relative flex flex-col rounded-2xl border bg-card p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-foreground/5",
+        aiHighlighted
+          ? "border-amber-400 ring-2 ring-amber-400/60 shadow-md shadow-amber-200/40"
+          : car.featured
+          ? "border-primary ring-1 ring-primary"
+          : "border-border"
       )}
     >
+      {/* AI recommended badge */}
+      {aiHighlighted && (
+        <div className="absolute -top-2.5 left-3 flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold text-amber-900 shadow-sm">
+          <Sparkles className="h-2.5 w-2.5" />
+          AI Pick
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="font-semibold text-foreground">{car.name}</p>
         <button

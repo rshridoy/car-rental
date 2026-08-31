@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CarFront } from "lucide-react";
 import {
@@ -24,6 +24,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CarCard, CarCardSkeleton } from "@/components/cars/CarCard";
 import type { CarCategoryId, CarDeal, CarCategory } from "@/data/deals";
 import { useApi } from "@/hooks/use-api";
+import { AIRecommendBar } from "@/components/ai/AIRecommendBar";
 
 const PAGE_SIZE = 8;
 
@@ -58,6 +59,11 @@ export function CarsListing() {
     [pathname, router, searchParams]
   );
 
+  // AI recommendation highlight state
+  const [aiHighlightIds, setAiHighlightIds] = useState<string[]>([]);
+  const handleRecommend = useCallback((ids: string[]) => setAiHighlightIds(ids), []);
+  const handleClearRecommend = useCallback(() => setAiHighlightIds([]), []);
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
       <div>
@@ -69,6 +75,13 @@ export function CarsListing() {
           {data ? `${data.total} car${data.total === 1 ? "" : "s"} available` : "Loading availability…"}
         </p>
       </div>
+
+      {/* AI Vehicle Recommender — positioned above the filter tabs */}
+      <AIRecommendBar
+        activeIds={aiHighlightIds}
+        onRecommend={handleRecommend}
+        onClear={handleClearRecommend}
+      />
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {catLoading ? (
@@ -129,7 +142,11 @@ export function CarsListing() {
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {data.items.map((car) => (
-              <CarCard key={car.id} car={car} />
+              <CarCard
+                key={car.id}
+                car={car}
+                aiHighlighted={aiHighlightIds.includes(car.id)}
+              />
             ))}
           </div>
         )}
