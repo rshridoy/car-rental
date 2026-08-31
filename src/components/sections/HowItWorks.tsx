@@ -1,7 +1,26 @@
-import { PROCESS_STEPS } from "@/data/landing";
+"use client";
+
+import { MapPin, Calendar, Car, type LucideIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useApi } from "@/hooks/use-api";
 import { Reveal } from "@/components/ui/Reveal";
 
+type StepItem = {
+  title: string;
+  description: string;
+  iconName: string;
+};
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  MapPin,
+  Calendar,
+  Car,
+};
+
 export function HowItWorks() {
+  const { data, loading } = useApi<{ items: StepItem[] }>("/api/how-it-works");
+  const steps = data?.items ?? [];
+
   return (
     <section id="how-it-works" className="bg-background py-24 sm:py-32">
       <div className="mx-auto max-w-5xl px-6 text-center lg:px-10">
@@ -30,15 +49,26 @@ export function HowItWorks() {
           </svg>
 
           <div className="relative grid grid-cols-1 gap-14 sm:grid-cols-3 sm:gap-8">
-            {PROCESS_STEPS.map((step, i) => (
-              <Reveal key={step.title} delay={i * 100} className="flex flex-col items-center">
-                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted">
-                  <step.icon className="h-8 w-8 text-foreground" />
-                </div>
-                <h3 className="mt-6 text-lg font-semibold text-foreground">{step.title}</h3>
-                <p className="mt-3 max-w-xs text-sm text-muted-foreground">{step.description}</p>
-              </Reveal>
-            ))}
+            {loading || !data
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex flex-col items-center gap-4">
+                    <Skeleton className="h-20 w-20 rounded-2xl" />
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-12 w-48" />
+                  </div>
+                ))
+              : steps.map((step, i) => {
+                  const Icon = ICON_MAP[step.iconName] ?? MapPin;
+                  return (
+                    <Reveal key={step.title} delay={i * 100} className="flex flex-col items-center">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-muted">
+                        <Icon className="h-8 w-8 text-foreground" />
+                      </div>
+                      <h3 className="mt-6 text-lg font-semibold text-foreground">{step.title}</h3>
+                      <p className="mt-3 max-w-xs text-sm text-muted-foreground">{step.description}</p>
+                    </Reveal>
+                  );
+                })}
           </div>
         </div>
       </div>

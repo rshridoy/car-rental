@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LOCATIONS } from "@/data/deals";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 
 const DATE_PRESETS = ["Today", "Tomorrow", "This Weekend", "Next Week"];
@@ -25,28 +26,34 @@ function TripField({
   options,
   value,
   onValueChange,
+  loading,
 }: {
   label: string;
   placeholder: string;
   options: readonly string[];
   value?: string;
   onValueChange?: (value: string) => void;
+  loading?: boolean;
 }) {
   return (
     <div className="flex-1">
       <p className="text-sm font-medium text-foreground">{label}</p>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="mt-1 h-auto w-full justify-between border-none p-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0 data-placeholder:text-muted-foreground [&>svg]:text-muted-foreground">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {loading ? (
+        <Skeleton className="mt-1 h-5 w-32" />
+      ) : (
+        <Select value={value} onValueChange={onValueChange}>
+          <SelectTrigger className="mt-1 h-auto w-full justify-between border-none p-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0 data-placeholder:text-muted-foreground [&>svg]:text-muted-foreground">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
@@ -54,18 +61,23 @@ function TripField({
 function TripFields({
   locationValue,
   onLocationChange,
+  locations,
+  loadingLocations,
 }: {
   locationValue?: string;
   onLocationChange?: (value: string) => void;
+  locations: readonly string[];
+  loadingLocations?: boolean;
 }) {
   return (
     <div className="flex flex-1 flex-col gap-4 sm:flex-row">
       <TripField
         label="Locations"
         placeholder="Select your city"
-        options={LOCATIONS}
+        options={locations}
         value={locationValue}
         onValueChange={onLocationChange}
+        loading={loadingLocations}
       />
       <TripField label="Date" placeholder="Select your date" options={DATE_PRESETS} />
       <TripField label="Time" placeholder="Select your time" options={TIME_PRESETS} />
@@ -78,6 +90,9 @@ export function BookingSearchBar() {
   const [location, setLocation] = useState<string>("");
   const groupId = useId();
   const router = useRouter();
+
+  const { data, loading: loadingLocations } = useApi<{ items: string[] }>("/api/locations");
+  const locations: readonly string[] = data?.items ?? [];
 
   const handleSearch = () => {
     const query = location ? `?location=${encodeURIComponent(location)}` : "";
@@ -98,7 +113,12 @@ export function BookingSearchBar() {
               Pick - Up
             </span>
           </label>
-          <TripFields locationValue={location} onLocationChange={setLocation} />
+          <TripFields
+            locationValue={location}
+            onLocationChange={setLocation}
+            locations={locations}
+            loadingLocations={loadingLocations}
+          />
         </div>
 
         <div aria-hidden="true" className="h-full w-px self-stretch bg-border" />
@@ -110,7 +130,7 @@ export function BookingSearchBar() {
               Drop - Off
             </span>
           </label>
-          <TripFields />
+          <TripFields locations={locations} loadingLocations={loadingLocations} />
         </div>
 
         <Button size="lg" className="shrink-0 self-center rounded-xl px-8" onClick={handleSearch}>
@@ -125,10 +145,15 @@ export function BookingSearchBar() {
           <TabsTrigger value="dropoff">Drop - Off</TabsTrigger>
         </TabsList>
         <TabsContent value="pickup" className="mt-4">
-          <TripFields locationValue={location} onLocationChange={setLocation} />
+          <TripFields
+            locationValue={location}
+            onLocationChange={setLocation}
+            locations={locations}
+            loadingLocations={loadingLocations}
+          />
         </TabsContent>
         <TabsContent value="dropoff" className="mt-4">
-          <TripFields />
+          <TripFields locations={locations} loadingLocations={loadingLocations} />
         </TabsContent>
         <Button size="lg" className="mt-6 w-full rounded-xl" onClick={handleSearch}>
           <Search className="h-4 w-4" />

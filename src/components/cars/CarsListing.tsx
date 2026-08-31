@@ -18,10 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CarCard, CarCardSkeleton } from "@/components/cars/CarCard";
-import { CAR_CATEGORIES, LOCATIONS, type CarCategoryId, type CarDeal } from "@/data/deals";
+import type { CarCategoryId, CarDeal, CarCategory } from "@/data/deals";
 import { useApi } from "@/hooks/use-api";
 
 const PAGE_SIZE = 8;
@@ -34,6 +35,11 @@ export function CarsListing() {
   const category = (searchParams.get("category") as CarCategoryId) ?? "popular";
   const location = searchParams.get("location") ?? "";
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
+
+  const { data: catData, loading: catLoading } = useApi<{ items: CarCategory[] }>("/api/categories");
+  const { data: locData, loading: locLoading } = useApi<{ items: string[] }>("/api/locations");
+  const categories = catData?.items ?? [];
+  const locations = locData?.items ?? [];
 
   const { data, loading } = useApi<{ items: CarDeal[]; total: number; totalPages: number; page: number }>(
     "/api/cars",
@@ -65,33 +71,45 @@ export function CarsListing() {
       </div>
 
       <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Tabs value={category} onValueChange={(v) => updateParams({ category: v, page: null })}>
-          <TabsList variant="line" className="h-auto flex-wrap justify-start gap-6 border-b border-border pb-0 group-data-horizontal/tabs:h-auto sm:gap-8">
-            {CAR_CATEGORIES.map((c) => (
-              <TabsTrigger
-                key={c.id}
-                value={c.id}
-                className="rounded-none px-1 pb-3 text-sm font-medium data-active:bg-transparent data-active:text-foreground data-active:after:bg-primary"
-              >
-                {c.label}
-              </TabsTrigger>
+        {catLoading ? (
+          <div className="flex gap-8 border-b border-border pb-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-4 w-20" />
             ))}
-          </TabsList>
-        </Tabs>
+          </div>
+        ) : (
+          <Tabs value={category} onValueChange={(v) => updateParams({ category: v, page: null })}>
+            <TabsList variant="line" className="h-auto flex-wrap justify-start gap-6 border-b border-border pb-0 group-data-horizontal/tabs:h-auto sm:gap-8">
+              {categories.map((c) => (
+                <TabsTrigger
+                  key={c.id}
+                  value={c.id}
+                  className="rounded-none px-1 pb-3 text-sm font-medium data-active:bg-transparent data-active:text-foreground data-active:after:bg-primary"
+                >
+                  {c.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
 
-        <Select value={location || "all"} onValueChange={(v) => updateParams({ location: v === "all" ? null : v, page: null })}>
-          <SelectTrigger className="w-full sm:w-48" aria-label="Filter by location">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All locations</SelectItem>
-            {LOCATIONS.map((loc) => (
-              <SelectItem key={loc} value={loc}>
-                {loc}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {locLoading ? (
+          <Skeleton className="h-9 w-full sm:w-48" />
+        ) : (
+          <Select value={location || "all"} onValueChange={(v) => updateParams({ location: v === "all" ? null : v, page: null })}>
+            <SelectTrigger className="w-full sm:w-48" aria-label="Filter by location">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All locations</SelectItem>
+              {locations.map((loc) => (
+                <SelectItem key={loc} value={loc}>
+                  {loc}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <div className="mt-8">

@@ -5,14 +5,20 @@ import Link from "next/link";
 import { PackageSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CarCard, CarCardSkeleton } from "@/components/cars/CarCard";
 import { Reveal } from "@/components/ui/Reveal";
-import { CAR_CATEGORIES, TOTAL_CAR_COUNT, type CarCategoryId, type CarDeal } from "@/data/deals";
+import type { CarCategoryId, CarDeal, CarCategory } from "@/data/deals";
 import { useApi } from "@/hooks/use-api";
 
 export function PopularDeals() {
   const [activeTab, setActiveTab] = useState<CarCategoryId>("popular");
+
+  const { data: catData, loading: catLoading } = useApi<{ items: CarCategory[]; total: number }>("/api/categories");
+  const categories = catData?.items ?? [];
+  const totalCarCount = catData?.total ?? 0;
+
   const { data, loading } = useApi<{ items: CarDeal[] }>("/api/cars", {
     category: activeTab,
     page: 1,
@@ -31,23 +37,33 @@ export function PopularDeals() {
           </p>
         </Reveal>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as CarCategoryId)}
-          className="mt-14 items-center"
-        >
-          <TabsList variant="line" className="h-auto w-full justify-center gap-10 border-b border-border pb-0 group-data-horizontal/tabs:h-auto">
-            {CAR_CATEGORIES.map((category) => (
-              <TabsTrigger
-                key={category.id}
-                value={category.id}
-                className="rounded-none px-1 pb-4 text-sm font-medium data-active:bg-transparent data-active:text-foreground data-active:after:bg-primary"
-              >
-                {category.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="mt-14">
+          {catLoading ? (
+            <div className="flex gap-10 border-b border-border pb-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-20" />
+              ))}
+            </div>
+          ) : (
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as CarCategoryId)}
+              className="items-center"
+            >
+              <TabsList variant="line" className="h-auto w-full justify-center gap-10 border-b border-border pb-0 group-data-horizontal/tabs:h-auto">
+                {categories.map((category) => (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id}
+                    className="rounded-none px-1 pb-4 text-sm font-medium data-active:bg-transparent data-active:text-foreground data-active:after:bg-primary"
+                  >
+                    {category.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
+        </div>
 
         <div className="mt-10">
           {loading || !data ? (
@@ -75,7 +91,9 @@ export function PopularDeals() {
           <Button asChild variant="outline" className="rounded-xl px-7">
             <Link href={`/cars?category=${activeTab}`}>Show more car</Link>
           </Button>
-          <p className="absolute right-0 text-sm text-muted-foreground">{TOTAL_CAR_COUNT} Car</p>
+          {totalCarCount > 0 && (
+            <p className="absolute right-0 text-sm text-muted-foreground">{totalCarCount} Car</p>
+          )}
         </div>
       </div>
     </section>

@@ -1,4 +1,8 @@
-import { FOOTER_COLUMNS } from "@/data/landing";
+"use client";
+
+import { Skeleton } from "@/components/ui/skeleton";
+import type { FooterColumn } from "@/data/landing";
+import { useApi } from "@/hooks/use-api";
 import { NewsletterForm } from "@/components/layout/NewsletterForm";
 
 const SOCIALS = [
@@ -13,6 +17,9 @@ const SOCIALS = [
 ];
 
 export function Footer() {
+  const { data, loading } = useApi<{ columns: FooterColumn[] }>("/api/footer");
+  const columns = data?.columns ?? [];
+
   return (
     <footer className="bg-surface-muted">
       <div className="mx-auto max-w-7xl px-6 pt-20 pb-10 lg:px-10">
@@ -59,20 +66,29 @@ export function Footer() {
         </div>
 
         <div className="grid grid-cols-1 gap-12 pt-10 sm:grid-cols-3">
-          {FOOTER_COLUMNS.map((column) => (
-            <div key={column.title}>
-              <p className="font-semibold text-foreground">{column.title}</p>
-              <ul className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
-                {column.links.map((link) => (
-                  <li key={link}>
-                    <a href="#" className="hover:text-foreground">
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {loading || !data
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-4">
+                  <Skeleton className="h-4 w-20" />
+                  {Array.from({ length: 3 }).map((__, j) => (
+                    <Skeleton key={j} className="h-3 w-28" />
+                  ))}
+                </div>
+              ))
+            : columns.map((column) => (
+                <div key={column.title}>
+                  <p className="font-semibold text-foreground">{column.title}</p>
+                  <ul className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground">
+                    {column.links.map((link) => (
+                      <li key={link}>
+                        <a href="#" className="hover:text-foreground">
+                          {link}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
         </div>
 
         <div className="mt-16 flex flex-col gap-4 border-t border-line-strong pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
