@@ -12,6 +12,11 @@ npm run lint
 npm run build
 ```
 
+The AI assistant (see below) needs a `PROXY_SECRET` env var. Copy `.env.example` to
+`.env.local` and fill in the real value (get it from the GCP project owner / secret manager —
+never commit it). Without it, the chat widget and AI recommender still render but every request
+fails with a 500.
+
 No real backend — but there is a mock API layer (`src/app/api/**`, Next.js Route Handlers)
 serving the typed data in `src/data/`. Every chart, table, and card fetches through it rather
 than importing data files directly into components, so filters/pagination/sorting are real
@@ -54,6 +59,31 @@ All of them filter/sort/paginate the arrays in `src/data/`, add a ~350ms simulat
 
 `POST /api/cars` also exists (used by "Create Product" and the topbar "Add New" dialog) — it
 appends a new car to the in-memory catalog and returns it with a 201.
+
+`POST /api/ai/chat` is unrelated to the mock layer above — see AI assistant below.
+
+## AI assistant
+
+Two surfaces, one route, one backing model call:
+
+- **Floating chat widget** (`src/components/ai/AIChatWidget.tsx`, mounted globally in
+  `src/app/layout.tsx`) — "Alex", a general Q&A assistant available on every page.
+- **AI Vehicle Recommender** (`src/components/ai/AIRecommendBar.tsx`, on `/cars` above the
+  category tabs) — describe a trip in natural language and get 1–3 car IDs back, which highlight
+  the matching `CarCard`s in the grid (`aiHighlighted` prop) with an amber "AI Pick" badge.
+
+Both go through `POST /api/ai/chat` (`src/app/api/ai/chat/route.ts`), sharing the `useAIChat`
+hook (`src/hooks/use-ai-chat.ts`) for conversation state. The request body is `{ mode: "chat" |
+"recommend", messages: ChatMessage[] }`; `recommend` mode also returns a `recommendations:
+{ carId, reason }[]` array, parsed out of a trailing JSON block the model is prompted to emit
+and filtered against the real `CAR_DEALS` catalog before being trusted (`src/lib/ai/gemini.ts`).
+
+The route calls a shared Vertex AI proxy (`src/lib/ai/gemini.ts`) rather than a model SDK
+directly — it's a thin pass-through in front of Vertex's `generateContent` endpoint, authenticated
+via the `PROXY_SECRET` header (see Setup above). The proxy doesn't support streaming, so replies
+block until complete and the UI shows a typing indicator while waiting. Messages are capped at
+2000 characters and history at 50 turns, both client- and server-side (`MAX_MESSAGE_LENGTH` in
+the hook, mirrored in the route handler).
 
 ## A real gotcha worth knowing about: shared in-memory mock state
 
@@ -112,10 +142,16 @@ write through this API layer.
 - `src/components/dashboard/` — sidebar, topbar, dashboard overview panels, plus the generic
   `DataTable` (search + sort + pagination over any array) and `PageHeader` used by nearly every
   admin sub-page, and `ProductsTable`/`CategoryTable`/`BrandsTable` for the catalog-backed ones.
+- `src/components/ai/` — `AIChatWidget` (floating chat bubble), `AIRecommendBar` (the `/cars`
+  recommender), plus shared `ChatInput`/`ChatMessage` pieces. See AI assistant above.
 - `src/data/` — typed mock data (`landing.ts`, `deals.ts`, `dashboard.ts`, `admin.ts`).
-- `src/app/api/` — the mock API route handlers described above.
+- `src/app/api/` — the mock API route handlers described above, plus `POST /api/ai/chat`
+  (not mocked — a real call to the Vertex proxy, see AI assistant above).
 - `src/hooks/` — `use-api` (fetch + loading/error state), `use-wishlist` (localStorage-backed,
-  via `useSyncExternalStore` so it never hydration-mismatches).
+  via `useSyncExternalStore` so it never hydration-mismatches), `use-ai-chat` (conversation state
+  for both AI surfaces).
+- `src/lib/ai/` — `gemini.ts` (Vertex proxy client, prompt building, recommendation parsing),
+  `types.ts` (shared chat/recommendation types).
 
 ## Design tokens
 
@@ -145,6 +181,9 @@ Font is Plus Jakarta Sans (`next/font/google`) via the `--font-sans` CSS variabl
   region and pinned tooltip move accordingly.
 - **"Add New"** (topbar) opens a mock product form; submitting shows a success toast (no
   persistence). **Mail/Bell** icons show mock notification lists in a dropdown.
+- **AI chat widget** (every page): real multi-turn conversation against the Vertex proxy, with
+  quick-prompt chips, a typing indicator, and "Clear conversation". **AI Vehicle Recommender**
+  (`/cars`): same backend, `recommend` mode — returned car IDs highlight the matching cards live.
 - Loading states are real fetch-pending states (not simulated timers) — every data-driven panel
   renders a skeleton until its request resolves, and empty results render `EmptyState`.
 
