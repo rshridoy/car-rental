@@ -36,14 +36,14 @@ function TripField({
   loading?: boolean;
 }) {
   return (
-    <div className="flex-1">
+    <div className="min-w-0 flex-1">
       <p className="text-sm font-medium text-foreground">{label}</p>
       {loading ? (
         <Skeleton className="mt-1 h-5 w-32" />
       ) : (
         <Select value={value} onValueChange={onValueChange}>
           <SelectTrigger className="mt-1 h-auto w-full justify-between border-none p-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0 data-placeholder:text-muted-foreground [&>svg]:text-muted-foreground">
-            <SelectValue placeholder={placeholder} />
+            <SelectValue placeholder={placeholder} className="truncate" />
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
@@ -70,7 +70,7 @@ function TripFields({
   loadingLocations?: boolean;
 }) {
   return (
-    <div className="flex flex-1 flex-col gap-4 sm:flex-row">
+    <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row">
       <TripField
         label="Locations"
         placeholder="Select your city"
@@ -100,13 +100,13 @@ export function BookingSearchBar() {
   };
 
   return (
-    <div className="rounded-[10px] border border-border bg-card p-6 shadow-lg shadow-foreground/5 sm:p-8">
+    <div className="rounded-[10px] border border-border bg-card p-6 shadow-lg shadow-foreground/5">
       <RadioGroup
         value={mode}
         onValueChange={(v) => setMode(v as "pickup" | "dropoff")}
-        className="hidden lg:flex lg:items-start lg:gap-10"
+        className="hidden lg:flex lg:items-start lg:gap-4"
       >
-        <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
           <label htmlFor={`${groupId}-pickup`} className="flex shrink-0 items-center gap-2 sm:w-28">
             <RadioGroupItem id={`${groupId}-pickup`} value="pickup" />
             <span className={cn("text-sm font-medium", mode === "pickup" ? "text-foreground" : "text-muted-foreground")}>
@@ -123,7 +123,7 @@ export function BookingSearchBar() {
 
         <div aria-hidden="true" className="h-full w-px self-stretch bg-border" />
 
-        <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start">
           <label htmlFor={`${groupId}-dropoff`} className="flex shrink-0 items-center gap-2 sm:w-28">
             <RadioGroupItem id={`${groupId}-dropoff`} value="dropoff" />
             <span className={cn("text-sm font-medium", mode === "dropoff" ? "text-foreground" : "text-muted-foreground")}>
@@ -133,7 +133,7 @@ export function BookingSearchBar() {
           <TripFields locations={locations} loadingLocations={loadingLocations} />
         </div>
 
-        <Button size="lg" className="shrink-0 self-center rounded-xl px-8" onClick={handleSearch}>
+        <Button size="lg" className="shrink-0 self-center rounded-xl px-6" onClick={handleSearch}>
           <Search className="h-4 w-4" />
           Search
         </Button>
